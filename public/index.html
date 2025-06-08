@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>WolfCinema</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <h1>Аля Кинописк</h1>
+  <input type="text" id="searchInput" placeholder="Поиск фильма по названию..." />
+
+  <div id="moviesList"></div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <span id="modalClose" class="modal-close">&times;</span>
+      <h2 id="modalTitle"></h2>
+      <p><strong>Год:</strong> <span id="modalYear"></span></p>
+      <p><strong>Жанры:</strong> <span id="modalGenres"></span></p>
+      <p><strong>Рейтинг:</strong> <span id="modalRating"></span></p>
+      <p id="modalDescription"></p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
