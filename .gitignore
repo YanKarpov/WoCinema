@@ -19,3 +19,4 @@ build/
 *.swo
 
 .idea/
+package-lock.json

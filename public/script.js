@@ -29,9 +29,9 @@ function renderMovies(movies) {
   moviesList.innerHTML = movies.map(movie => `
     <div class="movie" data-id="${movie.id}">
       <p class="movie-title">
-        ${movie.title} <span class="movie-year">(${movie.year})</span>
+        ${movie.title} <span class="movie-year">(${movie.year || '—'})</span>
       </p>
-      <p class="movie-desc">${movie.description}</p>
+      <p class="movie-desc">${movie.description || ''}</p>
     </div>
   `).join('');
 
@@ -49,15 +49,43 @@ async function showMovieDetails(id) {
     if (!res.ok) throw new Error('Фильм не найден');
     const movie = await res.json();
 
-    modalTitle.textContent = movie.title;
-    modalYear.textContent = movie.year;
-    modalGenres.textContent = movie.genre.join(', ');
-    modalRating.textContent = movie.rating;
-    modalDescription.textContent = movie.description;
+    // Заголовок
+    modalTitle.textContent = movie.title || 'Без названия';
+    // Год — берем либо локально, либо из tmdbData.release_date
+    modalYear.textContent = movie.year || (movie.tmdbData?.release_date ? movie.tmdbData.release_date.slice(0, 4) : '—');
+
+    // Жанры — приоритет tmdbData.genres, иначе локальный genre
+    if (movie.tmdbData?.genres && movie.tmdbData.genres.length) {
+      modalGenres.textContent = movie.tmdbData.genres.map(g => g.name).join(', ');
+    } else if (movie.genre && movie.genre.length) {
+      modalGenres.textContent = movie.genre.join(', ');
+    } else {
+      modalGenres.textContent = '—';
+    }
+
+    // Рейтинг — приоритет tmdbData.vote_average, иначе локальный rating
+    modalRating.textContent = movie.tmdbData?.vote_average ? movie.tmdbData.vote_average.toFixed(1) : (movie.rating || '—');
+
+    // Описание — приоритет tmdbData.overview, иначе локальный description
+    modalDescription.textContent = movie.tmdbData?.overview || movie.description || 'Описание отсутствует';
+
+    // Удаляем предыдущий постер и iframe, если есть
+    const oldPoster = modal.querySelector('.poster');
+    if (oldPoster) oldPoster.remove();
 
     const oldIframe = modal.querySelector('iframe');
     if (oldIframe) oldIframe.remove();
 
+    // Постер из TMDb, если есть
+    if (movie.tmdbData?.poster_path) {
+      const poster = document.createElement('img');
+      poster.classList.add('poster');
+      poster.src = `https://image.tmdb.org/t/p/w500${movie.tmdbData.poster_path}`;
+      poster.alt = `${movie.title} постер`;
+      modalTitle.insertAdjacentElement('afterend', poster);
+    }
+
+    // Видео с YouTube, если есть
     if (movie.youtubeId) {
       const iframe = document.createElement('iframe');
       iframe.width = "100%";
@@ -78,6 +106,8 @@ async function showMovieDetails(id) {
 
 function closeModal() {
   modal.classList.add('hidden');
+  const oldPoster = modal.querySelector('.poster');
+  if (oldPoster) oldPoster.remove();
   const oldIframe = modal.querySelector('iframe');
   if (oldIframe) oldIframe.remove();
 }

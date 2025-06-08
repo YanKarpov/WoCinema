@@ -1,6 +1,15 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
+import dotenv from 'dotenv';
+dotenv.config();
+
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import fetch from 'node-fetch';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = 3000;
 
@@ -27,7 +36,7 @@ app.get('/movies', (req, res) => {
   res.json(filteredMovies);
 });
 
-app.get('/movies/:id', (req, res) => {
+app.get('/movies/:id', async (req, res) => {
   const id = Number(req.params.id);
   const movie = movies.find(m => m.id === id);
 
@@ -35,7 +44,25 @@ app.get('/movies/:id', (req, res) => {
     return res.status(404).json({ message: 'Фильм не найден' });
   }
 
-  res.json(movie);
+  if (movie.tmdbId) {
+    try {
+      const response = await fetch(`https://api.themoviedb.org/3/movie/${movie.tmdbId}?api_key=${process.env.TMDB_API_KEY}&language=ru-RU`);
+      if (!response.ok) throw new Error('Ошибка TMDb API');
+      const tmdbData = await response.json();
+
+      const detailedMovie = {
+        ...movie,
+        tmdbData,
+      };
+
+      return res.json(detailedMovie);
+    } catch (error) {
+      console.error('Ошибка при запросе к TMDb', error);
+      return res.json(movie);
+    }
+  } else {
+    res.json(movie);
+  }
 });
 
 app.listen(PORT, () => {
