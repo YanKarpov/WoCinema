@@ -70,8 +70,12 @@ app.get('/movies/:id', async (req, res) => {
 
   if (movie.tmdbId) {
     try {
-      const response = await fetch(`https://api.themoviedb.org/3/movie/${movie.tmdbId}?api_key=${process.env.TMDB_API_KEY}&language=ru-RU`);
+      const response = await fetch(
+        `https://api.themoviedb.org/3/movie/${movie.tmdbId}?api_key=${process.env.TMDB_API_KEY}&language=ru-RU&append_to_response=videos`
+      );
+
       if (!response.ok) throw new Error('Ошибка TMDb API');
+
       const tmdbData = await response.json();
 
       const detailedMovie = {
@@ -88,6 +92,7 @@ app.get('/movies/:id', async (req, res) => {
     res.json(movie);
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен на http://localhost:${PORT}`);

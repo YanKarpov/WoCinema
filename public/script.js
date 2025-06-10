@@ -10,6 +10,8 @@ const modalRating = document.getElementById('modalRating');
 const modalDescription = document.getElementById('modalDescription');
 const modalPoster = document.getElementById('modalPoster');
 const modalCast = document.getElementById('modalCast');
+// Добавляем контейнер для видео
+const modalVideoContainer = document.getElementById('modalVideoContainer');
 
 // Загрузка фильмов
 async function loadMovies(search = '') {
@@ -34,23 +36,14 @@ function renderMovies(movies) {
   }
 
   moviesList.innerHTML = movies.map(movie => {
-    // Используем данные из TMDb если они есть, иначе локальные
     const tmdb = movie.tmdbData || {};
-    
-    // Постер (приоритет TMDb)
     const posterPath = tmdb.poster_path 
       ? `https://image.tmdb.org/t/p/w300${tmdb.poster_path}` 
       : 'https://via.placeholder.com/300x450?text=No+poster';
-    
-    // Название
     const title = tmdb.title || movie.title || 'Без названия';
-    
-    // Год (из release_date TMDb или локального year)
     const year = tmdb.release_date 
       ? tmdb.release_date.substring(0, 4) 
       : movie.year || '—';
-    
-    // Рейтинг (vote_average из TMDb или локальный rating)
     const rating = tmdb.vote_average 
       ? tmdb.vote_average.toFixed(1) 
       : movie.rating || '—';
@@ -69,7 +62,6 @@ function renderMovies(movies) {
     `;
   }).join('');
 
-  // Добавляем обработчики кликов
   document.querySelectorAll('.movie-card').forEach(card => {
     card.addEventListener('click', () => {
       const movieId = card.getAttribute('data-id');
@@ -87,42 +79,29 @@ async function showMovieDetails(id) {
     const movie = await res.json();
     const tmdb = movie.tmdbData || {};
 
-    // Заполняем модальное окно
     modalTitle.textContent = tmdb.title || movie.title || 'Без названия';
-    
-    // Год и время
     modalYear.textContent = tmdb.release_date 
       ? tmdb.release_date.substring(0, 4)
       : movie.year || '—';
-    
     modalRuntime.textContent = tmdb.runtime 
       ? `${Math.floor(tmdb.runtime / 60)}ч ${tmdb.runtime % 60}м`
       : '';
-    
-    // Рейтинг
     modalRating.textContent = tmdb.vote_average 
       ? tmdb.vote_average.toFixed(1)
       : movie.rating || '—';
-    
-    // Жанры
     modalGenres.innerHTML = tmdb.genres 
       ? tmdb.genres.map(genre => `<span>${genre.name}</span>`).join('')
       : movie.genre 
         ? movie.genre.map(g => `<span>${g}</span>`).join('')
         : '<span>—</span>';
-    
-    // Описание
     modalDescription.textContent = tmdb.overview 
       ? tmdb.overview
       : movie.description || 'Описание отсутствует';
-    
-    // Постер
     modalPoster.src = tmdb.poster_path 
       ? `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`
       : 'https://via.placeholder.com/500x750?text=No+poster';
     modalPoster.alt = `${movie.title} постер`;
-    
-    // Актёры (если есть в TMDb)
+
     if (tmdb.credits && tmdb.credits.cast) {
       const topCast = tmdb.credits.cast.slice(0, 5);
       modalCast.innerHTML = `
@@ -140,7 +119,28 @@ async function showMovieDetails(id) {
       modalCast.innerHTML = '';
     }
 
-    // Показываем модальное окно
+    // Вставляем YouTube трейлер если есть
+    let youtubeVideoId = '';
+    if (tmdb.videos && tmdb.videos.results && tmdb.videos.results.length) {
+      const trailer = tmdb.videos.results.find(v => v.site === 'YouTube' && v.type === 'Trailer');
+      if (trailer) {
+        youtubeVideoId = trailer.key;
+      }
+    }
+
+    if (youtubeVideoId) {
+      modalVideoContainer.innerHTML = `
+        <iframe
+          src="https://www.youtube.com/embed/${youtubeVideoId}"
+          title="YouTube video player"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      `;
+    } else {
+      modalVideoContainer.innerHTML = '<p>Трейлер недоступен</p>';
+    }
+
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
   } catch (error) {
@@ -153,9 +153,10 @@ async function showMovieDetails(id) {
 function closeModal() {
   modal.classList.add('hidden');
   document.body.style.overflow = 'auto';
+  // Очистим видео, чтобы остановить плеер
+  modalVideoContainer.innerHTML = '';
 }
 
-// Обработчики событий
 modalClose.addEventListener('click', closeModal);
 modal.addEventListener('click', (e) => {
   if (e.target === modal) closeModal();
@@ -165,15 +166,12 @@ searchInput.addEventListener('input', debounce(() => {
   loadMovies(searchInput.value);
 }, 300));
 
-// Задержка для поиска
 function debounce(func, wait) {
   let timeout;
   return function() {
     const context = this, args = arguments;
     clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      func.apply(context, args);
-    }, wait);
+    timeout = setTimeout(() => func.apply(context, args), wait);
   };
 }
 
