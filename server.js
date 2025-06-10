@@ -28,11 +28,14 @@ app.get('/movies', async (req, res) => {
   let filteredMovies = movies;
 
   if (search) {
-    filteredMovies = movies.filter(movie =>
-      movie.title.toLowerCase().includes(search) ||
-      (movie.tmdbData?.title && movie.tmdbData.title.toLowerCase().includes(search))
-    );
+    filteredMovies = movies.filter(movie => {
+      const localTitle = movie.title && typeof movie.title === 'string' ? movie.title.toLowerCase() : '';
+      const tmdbTitle = movie.tmdbData && movie.tmdbData.title && typeof movie.tmdbData.title === 'string' ? movie.tmdbData.title.toLowerCase() : '';
+      
+      return localTitle.includes(search) || tmdbTitle.includes(search);
+    });
   }
+
 
   const moviesWithTmdb = await Promise.all(filteredMovies.map(async movie => {
     if (!movie.tmdbId || movie.tmdbData) return movie;
