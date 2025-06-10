@@ -1,126 +1,180 @@
 const moviesList = document.getElementById('moviesList');
 const searchInput = document.getElementById('searchInput');
-
 const modal = document.getElementById('modal');
 const modalClose = document.getElementById('modalClose');
 const modalTitle = document.getElementById('modalTitle');
 const modalYear = document.getElementById('modalYear');
+const modalRuntime = document.getElementById('modalRuntime');
 const modalGenres = document.getElementById('modalGenres');
 const modalRating = document.getElementById('modalRating');
 const modalDescription = document.getElementById('modalDescription');
+const modalPoster = document.getElementById('modalPoster');
+const modalCast = document.getElementById('modalCast');
 
+// Загрузка фильмов
 async function loadMovies(search = '') {
-  const url = search ? `/movies?search=${encodeURIComponent(search)}` : '/movies';
   try {
+    const url = search ? `/movies?search=${encodeURIComponent(search)}` : '/movies';
     const res = await fetch(url);
-    if (!res.ok) throw new Error('Ошибка сети');
+    
+    if (!res.ok) throw new Error('Ошибка загрузки данных');
+    
     const movies = await res.json();
     renderMovies(movies);
   } catch (error) {
-    moviesList.innerHTML = `<p>Ошибка загрузки данных: ${error.message}</p>`;
+    moviesList.innerHTML = `<p class="error">${error.message}</p>`;
+    console.error('Ошибка:', error);
   }
 }
 
 function renderMovies(movies) {
   if (movies.length === 0) {
-    moviesList.innerHTML = '<p>Фильмы не найдены.</p>';
+    moviesList.innerHTML = '<p class="no-results">Фильмы не найдены</p>';
     return;
   }
-  moviesList.innerHTML = movies.map(movie => `
-    <div class="movie" data-id="${movie.id}">
-      <p class="movie-title">
-        ${movie.title} <span class="movie-year">(${movie.year || '—'})</span>
-      </p>
-      <p class="movie-desc">${movie.description || ''}</p>
-    </div>
-  `).join('');
 
-  document.querySelectorAll('.movie').forEach(el => {
-    el.addEventListener('click', () => {
-      const movieId = el.getAttribute('data-id');
+  moviesList.innerHTML = movies.map(movie => {
+    // Используем данные из TMDb если они есть, иначе локальные
+    const tmdb = movie.tmdbData || {};
+    
+    // Постер (приоритет TMDb)
+    const posterPath = tmdb.poster_path 
+      ? `https://image.tmdb.org/t/p/w300${tmdb.poster_path}` 
+      : 'https://via.placeholder.com/300x450?text=No+poster';
+    
+    // Название
+    const title = tmdb.title || movie.title || 'Без названия';
+    
+    // Год (из release_date TMDb или локального year)
+    const year = tmdb.release_date 
+      ? tmdb.release_date.substring(0, 4) 
+      : movie.year || '—';
+    
+    // Рейтинг (vote_average из TMDb или локальный rating)
+    const rating = tmdb.vote_average 
+      ? tmdb.vote_average.toFixed(1) 
+      : movie.rating || '—';
+
+    return `
+      <div class="movie-card" data-id="${movie.id}">
+        <img class="movie-poster" src="${posterPath}" alt="${title}" loading="lazy">
+        <div class="movie-info">
+          <h3 class="movie-title">${title}</h3>
+          <div class="movie-meta">
+            <span class="movie-year">${year}</span>
+            ${rating !== '—' ? `<span class="movie-rating">★ ${rating}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Добавляем обработчики кликов
+  document.querySelectorAll('.movie-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const movieId = card.getAttribute('data-id');
       showMovieDetails(movieId);
     });
   });
 }
 
+// Показ деталей фильма
 async function showMovieDetails(id) {
   try {
     const res = await fetch(`/movies/${id}`);
     if (!res.ok) throw new Error('Фильм не найден');
+    
     const movie = await res.json();
+    const tmdb = movie.tmdbData || {};
 
-    // Заголовок
-    modalTitle.textContent = movie.title || 'Без названия';
-    // Год — берем либо локально, либо из tmdbData.release_date
-    modalYear.textContent = movie.year || (movie.tmdbData?.release_date ? movie.tmdbData.release_date.slice(0, 4) : '—');
-
-    // Жанры — приоритет tmdbData.genres, иначе локальный genre
-    if (movie.tmdbData?.genres && movie.tmdbData.genres.length) {
-      modalGenres.textContent = movie.tmdbData.genres.map(g => g.name).join(', ');
-    } else if (movie.genre && movie.genre.length) {
-      modalGenres.textContent = movie.genre.join(', ');
+    // Заполняем модальное окно
+    modalTitle.textContent = tmdb.title || movie.title || 'Без названия';
+    
+    // Год и время
+    modalYear.textContent = tmdb.release_date 
+      ? tmdb.release_date.substring(0, 4)
+      : movie.year || '—';
+    
+    modalRuntime.textContent = tmdb.runtime 
+      ? `${Math.floor(tmdb.runtime / 60)}ч ${tmdb.runtime % 60}м`
+      : '';
+    
+    // Рейтинг
+    modalRating.textContent = tmdb.vote_average 
+      ? tmdb.vote_average.toFixed(1)
+      : movie.rating || '—';
+    
+    // Жанры
+    modalGenres.innerHTML = tmdb.genres 
+      ? tmdb.genres.map(genre => `<span>${genre.name}</span>`).join('')
+      : movie.genre 
+        ? movie.genre.map(g => `<span>${g}</span>`).join('')
+        : '<span>—</span>';
+    
+    // Описание
+    modalDescription.textContent = tmdb.overview 
+      ? tmdb.overview
+      : movie.description || 'Описание отсутствует';
+    
+    // Постер
+    modalPoster.src = tmdb.poster_path 
+      ? `https://image.tmdb.org/t/p/w500${tmdb.poster_path}`
+      : 'https://via.placeholder.com/500x750?text=No+poster';
+    modalPoster.alt = `${movie.title} постер`;
+    
+    // Актёры (если есть в TMDb)
+    if (tmdb.credits && tmdb.credits.cast) {
+      const topCast = tmdb.credits.cast.slice(0, 5);
+      modalCast.innerHTML = `
+        <h3>Актёры:</h3>
+        <div class="cast-grid">
+          ${topCast.map(actor => `
+            <div class="actor">
+              <p class="actor-name">${actor.name}</p>
+              <p class="actor-character">${actor.character || '—'}</p>
+            </div>
+          `).join('')}
+        </div>
+      `;
     } else {
-      modalGenres.textContent = '—';
+      modalCast.innerHTML = '';
     }
 
-    // Рейтинг — приоритет tmdbData.vote_average, иначе локальный rating
-    modalRating.textContent = movie.tmdbData?.vote_average ? movie.tmdbData.vote_average.toFixed(1) : (movie.rating || '—');
-
-    // Описание — приоритет tmdbData.overview, иначе локальный description
-    modalDescription.textContent = movie.tmdbData?.overview || movie.description || 'Описание отсутствует';
-
-    // Удаляем предыдущий постер и iframe, если есть
-    const oldPoster = modal.querySelector('.poster');
-    if (oldPoster) oldPoster.remove();
-
-    const oldIframe = modal.querySelector('iframe');
-    if (oldIframe) oldIframe.remove();
-
-    // Постер из TMDb, если есть
-    if (movie.tmdbData?.poster_path) {
-      const poster = document.createElement('img');
-      poster.classList.add('poster');
-      poster.src = `https://image.tmdb.org/t/p/w500${movie.tmdbData.poster_path}`;
-      poster.alt = `${movie.title} постер`;
-      modalTitle.insertAdjacentElement('afterend', poster);
-    }
-
-    // Видео с YouTube, если есть
-    if (movie.youtubeId) {
-      const iframe = document.createElement('iframe');
-      iframe.width = "100%";
-      iframe.height = "315";
-      iframe.src = `https://www.youtube.com/embed/${movie.youtubeId}`;
-      iframe.frameBorder = "0";
-      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-      iframe.allowFullscreen = true;
-
-      modalDescription.insertAdjacentElement('afterend', iframe);
-    }
-
+    // Показываем модальное окно
     modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
   } catch (error) {
-    alert(error.message);
+    console.error('Ошибка:', error);
+    alert('Не удалось загрузить информацию о фильме');
   }
 }
 
+// Закрытие модального окна
 function closeModal() {
   modal.classList.add('hidden');
-  const oldPoster = modal.querySelector('.poster');
-  if (oldPoster) oldPoster.remove();
-  const oldIframe = modal.querySelector('iframe');
-  if (oldIframe) oldIframe.remove();
+  document.body.style.overflow = 'auto';
 }
 
+// Обработчики событий
 modalClose.addEventListener('click', closeModal);
 modal.addEventListener('click', (e) => {
-  if (e.target === modal) {
-    closeModal();
-  }
+  if (e.target === modal) closeModal();
 });
 
-searchInput.addEventListener('input', () => {
+searchInput.addEventListener('input', debounce(() => {
   loadMovies(searchInput.value);
-});
+}, 300));
+
+// Задержка для поиска
+function debounce(func, wait) {
+  let timeout;
+  return function() {
+    const context = this, args = arguments;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func.apply(context, args);
+    }, wait);
+  };
+}
 
 loadMovies();

@@ -1,25 +1,45 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WolfCinema</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <header>
+    <h1>WolfCinema</h1>
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="Поиск фильмов..." autocomplete="off">
+      <div class="search-icon">🔍</div>
+    </div>
+  </header>
 
-  <h1>Аля Кинописк</h1>
-  <input type="text" id="searchInput" placeholder="Поиск фильма по названию..." />
-
-  <div id="moviesList"></div>
+  <main>
+    <div id="moviesList" class="movies-grid"></div>
+  </main>
 
   <div id="modal" class="modal hidden">
     <div class="modal-content">
       <span id="modalClose" class="modal-close">&times;</span>
-      <h2 id="modalTitle"></h2>
-      <p><strong>Год:</strong> <span id="modalYear"></span></p>
-      <p><strong>Жанры:</strong> <span id="modalGenres"></span></p>
-      <p><strong>Рейтинг:</strong> <span id="modalRating"></span></p>
-      <p id="modalDescription"></p>
+      <div class="modal-header">
+        <h2 id="modalTitle"></h2>
+        <div class="modal-meta">
+          <span id="modalYear"></span>
+          <span id="modalRuntime"></span>
+          <span id="modalRating" class="rating"></span>
+        </div>
+        <div id="modalGenres" class="genres"></div>
+      </div>
+      <div class="modal-body">
+        <div class="poster-container">
+          <img id="modalPoster" class="poster" src="" alt="Постер фильма">
+        </div>
+        <div class="details">
+          <p id="modalDescription" class="description"></p>
+          <div id="modalCast" class="cast"></div>
+        </div>
+      </div>
     </div>
   </div>
 

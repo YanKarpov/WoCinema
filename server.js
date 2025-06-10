@@ -23,17 +23,38 @@ try {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/movies', (req, res) => {
+app.get('/movies', async (req, res) => {
   const search = req.query.search ? req.query.search.toLowerCase() : '';
   let filteredMovies = movies;
 
   if (search) {
     filteredMovies = movies.filter(movie =>
-      movie.title.toLowerCase().includes(search)
+      movie.title.toLowerCase().includes(search) ||
+      (movie.tmdbData?.title && movie.tmdbData.title.toLowerCase().includes(search))
     );
   }
 
-  res.json(filteredMovies);
+  const moviesWithTmdb = await Promise.all(filteredMovies.map(async movie => {
+    if (!movie.tmdbId || movie.tmdbData) return movie;
+    
+    try {
+      const response = await fetch(
+        `https://api.themoviedb.org/3/movie/${movie.tmdbId}?api_key=${process.env.TMDB_API_KEY}&language=ru-RU`
+      );
+      if (response.ok) {
+        return {
+          ...movie,
+          tmdbData: await response.json()
+        };
+      }
+    } catch (error) {
+      console.error(`Ошибка загрузки TMDb данных для фильма ${movie.id}`, error);
+    }
+    
+    return movie;
+  }));
+
+  res.json(moviesWithTmdb);
 });
 
 app.get('/movies/:id', async (req, res) => {
