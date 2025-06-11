@@ -21,8 +21,18 @@ try {
   console.error('Ошибка чтения movies.json', error);
 }
 
+// Функция для сохранения фильмов в файл
+function saveMoviesToFile() {
+  try {
+    fs.writeFileSync('./movies.json', JSON.stringify(movies, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Ошибка при сохранении movies.json', error);
+  }
+}
+
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Маршрут: список фильмов с возможностью поиска
 app.get('/movies', async (req, res) => {
   const search = req.query.search ? req.query.search.toLowerCase() : '';
   let filteredMovies = movies;
@@ -30,36 +40,47 @@ app.get('/movies', async (req, res) => {
   if (search) {
     filteredMovies = movies.filter(movie => {
       const localTitle = movie.title && typeof movie.title === 'string' ? movie.title.toLowerCase() : '';
-      const tmdbTitle = movie.tmdbData && movie.tmdbData.title && typeof movie.tmdbData.title === 'string' ? movie.tmdbData.title.toLowerCase() : '';
-      
-      return localTitle.includes(search) || tmdbTitle.includes(search);
+      return localTitle.includes(search);
     });
   }
 
+  const updated = [];
 
   const moviesWithTmdb = await Promise.all(filteredMovies.map(async movie => {
-    if (!movie.tmdbId || movie.tmdbData) return movie;
-    
+    if (!movie.tmdbId || movie.title) return movie; // если уже загружено
+
     try {
       const response = await fetch(
         `https://api.themoviedb.org/3/movie/${movie.tmdbId}?api_key=${process.env.TMDB_API_KEY}&language=ru-RU`
       );
+
       if (response.ok) {
-        return {
-          ...movie,
-          tmdbData: await response.json()
-        };
+        const tmdbData = await response.json();
+
+        movie.title = tmdbData.title || movie.title;
+        movie.year = tmdbData.release_date ? Number(tmdbData.release_date.split('-')[0]) : null;
+        movie.genre = tmdbData.genres ? tmdbData.genres.map(g => g.name) : [];
+        movie.description = tmdbData.overview || '';
+        movie.rating = tmdbData.vote_average || null;
+        movie.poster = tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : null;
+
+        updated.push(true);
       }
     } catch (error) {
       console.error(`Ошибка загрузки TMDb данных для фильма ${movie.id}`, error);
     }
-    
+
     return movie;
   }));
+
+  if (updated.length > 0) {
+    saveMoviesToFile();
+  }
 
   res.json(moviesWithTmdb);
 });
 
+// Маршрут: детальная информация по фильму
 app.get('/movies/:id', async (req, res) => {
   const id = Number(req.params.id);
   const movie = movies.find(m => m.id === id);
@@ -78,12 +99,15 @@ app.get('/movies/:id', async (req, res) => {
 
       const tmdbData = await response.json();
 
-      const detailedMovie = {
-        ...movie,
-        tmdbData,
-      };
+      const youtubeVideo = (tmdbData.videos.results || []).find(
+        v => v.site === 'YouTube' && v.type === 'Trailer'
+      );
 
-      return res.json(detailedMovie);
+      movie.youtubeId = youtubeVideo ? youtubeVideo.key : null;
+
+      saveMoviesToFile(); // если нашли youtubeId и обновили
+
+      return res.json(movie);
     } catch (error) {
       console.error('Ошибка при запросе к TMDb', error);
       return res.json(movie);
@@ -93,7 +117,7 @@ app.get('/movies/:id', async (req, res) => {
   }
 });
 
-
+// Запуск сервера
 app.listen(PORT, () => {
   console.log(`Сервер запущен на http://localhost:${PORT}`);
 });
