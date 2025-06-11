@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Комната просмотра</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+    .placeholder {
+      padding: 2rem;
+      border: 2px dashed #ccc;
+      border-radius: 10px;
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="placeholder">
+    <h1>🎥 Комната просмотра</h1>
+    <p>Фильм ID: <span id="movieId"></span></p>
+    <p>В будущем будет наверное плеер на просмотр</p>
+    <a href="/">← Назад</a>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    document.getElementById('movieId').textContent = urlParams.get('movieId') || 'неизвестен';
+  </script>
+</body>
+</html>
