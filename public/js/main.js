@@ -53,10 +53,9 @@ async function checkAuth() {
     authContainer.innerHTML = '';
     const loginLink = document.createElement('a');
     loginLink.href = '/auth.html';
-    loginLink.textContent = 'Войти / Зарегистрироваться';
+    loginLink.textContent = 'Уже с нами? Войдите или зарегистрируйтесь';
     loginLink.style.color = 'white';
     loginLink.style.fontWeight = 'bold';
-    loginLink.style.textDecoration = 'underline';
     authContainer.appendChild(loginLink);
   }
 }

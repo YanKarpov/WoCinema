@@ -7,11 +7,24 @@ header {
 }
 
 #authContainer a {
-  color: white;
-  font-weight: bold;
-  text-decoration: underline;
+  color: #e91e63;              
+  font-weight: 600;
+  text-decoration: none;       
   cursor: pointer;
+  font-size: 14px;
+  padding: 6px 12px;
+  border: 2px solid #e91e63;
+  border-radius: 20px;
+  display: inline-block;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+#authContainer a:hover {
+  background-color: #e91e63;
+  color: white;
+}
+
+
 
 .header-user {
   display: inline-flex;
@@ -34,4 +47,66 @@ header {
 
 .header-user button:hover {
   background-color: #48a;
+}
+
+.favorite-btn {
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: gold;
+  transition: color 0.3s ease, transform 0.2s ease;
+  padding: 0;
+}
+
+.favorite-btn:hover {
+  transform: scale(1.2);
+}
+
+.favorites-toggle {
+  margin-left: 20px;
+  padding: 8px 16px;
+  background-color: #444;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.favorites-toggle:hover {
+  background-color: #666;
+}
+
+.favorites-toggle.active {
+  background-color: #e91e63;
+  color: #fff;
+}
+
+.favorites-toggle:active {
+  transform: scale(0.97);
+}
+
+.search-container {
+  position: relative;
+  max-width: 600px;
+  margin: 1.5rem auto 0;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  outline: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
 }
