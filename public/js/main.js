@@ -18,7 +18,7 @@ const modalCast = document.getElementById('modalCast');
 const modalVideoContainer = document.getElementById('modalVideoContainer');
 const createRoomBtn = document.getElementById('createRoomBtn');
 const body = document.body;
-const header = document.querySelector('header');
+const authContainer = document.getElementById('authContainer');
 
 async function checkAuth() {
   try {
@@ -26,37 +26,53 @@ async function checkAuth() {
     if (!res.ok) throw new Error('Неавторизован');
     const user = await res.json();
 
-    // Удаляем ссылку входа/регистрации
-    const loginLink = header.querySelector('a[href="/auth.html"]');
-    if (loginLink) loginLink.remove();
-
-    // Добавляем имя пользователя и кнопку выхода
+    authContainer.innerHTML = ''; // очистить
     const userDiv = document.createElement('div');
-    userDiv.style.color = 'white';
-    userDiv.style.marginLeft = '20px';
-    userDiv.style.fontWeight = 'bold';
-    userDiv.textContent = `Привет, ${user.username}`;
+    userDiv.classList.add('header-user');
+
+    const userNameSpan = document.createElement('span');
+    userNameSpan.textContent = `Привет, ${user.username}`;
 
     const logoutBtn = document.createElement('button');
     logoutBtn.textContent = 'Выйти';
-    logoutBtn.style.marginLeft = '10px';
-    logoutBtn.style.cursor = 'pointer';
     logoutBtn.onclick = async () => {
       await fetch('/auth/logout', { method: 'POST' });
       location.reload();
     };
 
-    header.appendChild(userDiv);
-    header.appendChild(logoutBtn);
+    userDiv.appendChild(userNameSpan);
+    userDiv.appendChild(logoutBtn);
+    authContainer.appendChild(userDiv);
   } catch {
-    // Не авторизован — оставляем ссылку на вход
+    // Не авторизован — показать ссылку на вход
+    authContainer.innerHTML = '';
+    const loginLink = document.createElement('a');
+    loginLink.href = '/auth.html';
+    loginLink.textContent = 'Войти / Зарегистрироваться';
+    loginLink.style.color = 'white';
+    loginLink.style.fontWeight = 'bold';
+    loginLink.style.textDecoration = 'underline';
+    authContainer.appendChild(loginLink);
   }
 }
 
 async function loadMovies(search = '') {
   try {
-    const movies = await fetchMovies(search);
+    // Параллельно загружаем фильмы и избранное
+    const [movies, favorites] = await Promise.all([
+      fetchMovies(search),
+      fetch('/auth/me/favorites').then(res => res.ok ? res.json() : [])
+    ]);
+
+    // Добавляем флаг избранного к каждому фильму
+    movies.forEach(movie => {
+      movie.isFavorite = favorites.includes(String(movie.id));
+    });
+
     renderMovies(movies, moviesList, showMovieDetails);
+
+    setupFavoriteButtons(); // Навесим обработчики на кнопки избранного
+
   } catch (error) {
     moviesList.innerHTML = `<p class="error">${error.message}</p>`;
     console.error('Ошибка:', error);
@@ -87,6 +103,46 @@ async function showMovieDetails(id) {
 
 function closeModalHandler() {
   closeModal(modal, body, modalVideoContainer);
+}
+
+function setupFavoriteButtons() {
+  const favButtons = document.querySelectorAll('.favorite-btn');
+  favButtons.forEach(button => {
+    button.onclick = async (e) => {
+      e.stopPropagation(); // чтобы клик по звёздочке не открывал модалку
+
+      const movieCard = button.closest('.movie-card');
+      const movieId = movieCard.getAttribute('data-id');
+
+      try {
+        const res = await fetch('/auth/me/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ movieId }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          alert(data.message || 'Ошибка при обновлении избранного');
+          return;
+        }
+
+        const favorites = await res.json();
+
+        if (favorites.includes(movieId)) {
+          button.textContent = '★'; // Заполненная звезда
+          button.classList.add('favorite-active');
+        } else {
+          button.textContent = '☆'; // Пустая звезда
+          button.classList.remove('favorite-active');
+        }
+
+      } catch (error) {
+        console.error(error);
+        alert('Ошибка сети');
+      }
+    };
+  });
 }
 
 setupModalHandlers(modal, modalClose, closeModalHandler);

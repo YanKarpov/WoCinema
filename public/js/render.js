@@ -13,6 +13,9 @@ export function renderMovies(movies, container, onMovieClick) {
     return `
       <div class="movie-card" data-id="${movie.id}">
         <img class="movie-poster" src="${posterPath}" alt="${title}" loading="lazy">
+        <button class="favorite-btn" aria-label="Добавить в избранное" title="Добавить в избранное">
+          ${movie.isFavorite ? '★' : '☆'}
+        </button>
         <div class="movie-info">
           <h3 class="movie-title">${title}</h3>
           <div class="movie-meta">
