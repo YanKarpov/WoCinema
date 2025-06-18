@@ -20,3 +20,4 @@ build/
 
 .idea/
 package-lock.json
+users.json
