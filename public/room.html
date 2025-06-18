@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Комната просмотра</title>
   <style>
     body {
@@ -12,26 +12,68 @@
       justify-content: center;
       height: 100vh;
       text-align: center;
+      background-color: #111;
+      color: white;
+      margin: 0;
+      padding: 20px;
     }
-    .placeholder {
-      padding: 2rem;
-      border: 2px dashed #ccc;
+    .player-container {
+      margin: 20px 0;
       border-radius: 10px;
-      background-color: #f9f9f9;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(0,0,0,0.7);
+    }
+    iframe {
+      display: block;
+      width: 560px;
+      height: 315px;
+      border: none;
+      border-radius: 10px;
+    }
+    a {
+      color: #e91e63;
+      font-weight: bold;
+      text-decoration: none;
+      margin-top: 20px;
+      font-size: 16px;
+    }
+    a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <div class="placeholder">
-    <h1>🎥 Комната просмотра</h1>
-    <p>Фильм ID: <span id="movieId"></span></p>
-    <p>В будущем будет наверное плеер на просмотр</p>
-    <a href="/">← Назад</a>
+  <h1>🎥 Комната просмотра</h1>
+  <p>Фильм ID: <span id="movieId">неизвестен</span></p>
+  
+  <div class="player-container" id="playerArea">
+    <!-- Плеер вставится сюда -->
   </div>
+  
+  <a href="/">← Назад</a>
 
   <script>
     const urlParams = new URLSearchParams(window.location.search);
-    document.getElementById('movieId').textContent = urlParams.get('movieId') || 'неизвестен';
+    const movieId = urlParams.get('movieId') || 'неизвестен';
+    document.getElementById('movieId').textContent = movieId;
+
+    const videoMap = {
+      '1': 'AlR0fQsm83Y'
+    };
+
+    const youtubeId = videoMap[movieId] || null;
+
+    if (youtubeId) {
+      const iframe = document.createElement('iframe');
+      iframe.src = `https://www.youtube.com/embed/${youtubeId}`;
+      iframe.allow =
+        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      iframe.allowFullscreen = true;
+      document.getElementById('playerArea').appendChild(iframe);
+    } else {
+      // Если видео не найдено — покажем сообщение
+      document.getElementById('playerArea').textContent = 'Видео не найдено для данного фильма.';
+    }
   </script>
 </body>
 </html>
