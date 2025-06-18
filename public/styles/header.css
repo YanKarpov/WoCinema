@@ -1,0 +1,37 @@
+header {
+  background-color: #1a1a1a;
+  color: white;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+#authContainer a {
+  color: white;
+  font-weight: bold;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.header-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+  font-weight: bold;
+}
+
+.header-user button {
+  background-color: #5a9;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.header-user button:hover {
+  background-color: #48a;
+}

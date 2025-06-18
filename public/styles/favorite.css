@@ -1,0 +1,37 @@
+.favorite-btn {
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: gold; 
+  transition: color 0.3s ease, transform 0.2s ease;
+  padding: 0;
+}
+
+.favorite-btn:hover {
+  transform: scale(1.2);
+}
+
+.favorites-toggle {
+  margin-left: 20px;
+  padding: 8px 16px;
+  background-color: #444;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.favorites-toggle:hover {
+  background-color: #666;
+}
+
+.favorites-toggle.active {
+  background-color: #e91e63;
+  color: #fff;
+}
+
+.favorites-toggle:active {
+  transform: scale(0.97);
+}

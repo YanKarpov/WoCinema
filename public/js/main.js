@@ -19,6 +19,11 @@ const modalVideoContainer = document.getElementById('modalVideoContainer');
 const createRoomBtn = document.getElementById('createRoomBtn');
 const body = document.body;
 const authContainer = document.getElementById('authContainer');
+const showFavoritesBtn = document.getElementById('showFavoritesBtn'); // Добавили кнопку
+
+// Новый флаг и массив
+let allMovies = [];
+let showOnlyFavorites = false;
 
 async function checkAuth() {
   try {
@@ -58,25 +63,33 @@ async function checkAuth() {
 
 async function loadMovies(search = '') {
   try {
-    // Параллельно загружаем фильмы и избранное
     const [movies, favorites] = await Promise.all([
       fetchMovies(search),
       fetch('/auth/me/favorites').then(res => res.ok ? res.json() : [])
     ]);
 
-    // Добавляем флаг избранного к каждому фильму
     movies.forEach(movie => {
       movie.isFavorite = favorites.includes(String(movie.id));
     });
 
-    renderMovies(movies, moviesList, showMovieDetails);
-
-    setupFavoriteButtons(); // Навесим обработчики на кнопки избранного
+    allMovies = movies; // Сохраняем все фильмы
+    renderCurrentMovies();
+    setupFavoriteButtons();
 
   } catch (error) {
     moviesList.innerHTML = `<p class="error">${error.message}</p>`;
     console.error('Ошибка:', error);
   }
+}
+
+// Новый рендер с фильтрацией
+function renderCurrentMovies() {
+  const filtered = showOnlyFavorites
+    ? allMovies.filter(m => m.isFavorite)
+    : allMovies;
+
+  renderMovies(filtered, moviesList, showMovieDetails);
+  setupFavoriteButtons(); // Чтобы кнопки заново навесились
 }
 
 async function showMovieDetails(id) {
@@ -109,7 +122,7 @@ function setupFavoriteButtons() {
   const favButtons = document.querySelectorAll('.favorite-btn');
   favButtons.forEach(button => {
     button.onclick = async (e) => {
-      e.stopPropagation(); // чтобы клик по звёздочке не открывал модалку
+      e.stopPropagation();
 
       const movieCard = button.closest('.movie-card');
       const movieId = movieCard.getAttribute('data-id');
@@ -129,13 +142,11 @@ function setupFavoriteButtons() {
 
         const favorites = await res.json();
 
-        if (favorites.includes(movieId)) {
-          button.textContent = '★'; // Заполненная звезда
-          button.classList.add('favorite-active');
-        } else {
-          button.textContent = '☆'; // Пустая звезда
-          button.classList.remove('favorite-active');
-        }
+        allMovies.forEach(m => {
+          m.isFavorite = favorites.includes(String(m.id));
+        });
+
+        renderCurrentMovies(); // Перерендерим с новым избранным
 
       } catch (error) {
         console.error(error);
@@ -144,6 +155,17 @@ function setupFavoriteButtons() {
     };
   });
 }
+
+// Новый обработчик кнопки Показывать Избранные
+showFavoritesBtn.onclick = () => {
+  showOnlyFavorites = !showOnlyFavorites;
+  showFavoritesBtn.classList.toggle('active', showOnlyFavorites);
+  showFavoritesBtn.textContent = showOnlyFavorites
+    ? 'Показать все'
+    : 'Показать избранные';
+
+  renderCurrentMovies();
+};
 
 setupModalHandlers(modal, modalClose, closeModalHandler);
 setupSearch(searchInput, loadMovies);
