@@ -18,6 +18,40 @@ const modalCast = document.getElementById('modalCast');
 const modalVideoContainer = document.getElementById('modalVideoContainer');
 const createRoomBtn = document.getElementById('createRoomBtn');
 const body = document.body;
+const header = document.querySelector('header');
+
+async function checkAuth() {
+  try {
+    const res = await fetch('/auth/me');
+    if (!res.ok) throw new Error('Неавторизован');
+    const user = await res.json();
+
+    // Удаляем ссылку входа/регистрации
+    const loginLink = header.querySelector('a[href="/auth.html"]');
+    if (loginLink) loginLink.remove();
+
+    // Добавляем имя пользователя и кнопку выхода
+    const userDiv = document.createElement('div');
+    userDiv.style.color = 'white';
+    userDiv.style.marginLeft = '20px';
+    userDiv.style.fontWeight = 'bold';
+    userDiv.textContent = `Привет, ${user.username}`;
+
+    const logoutBtn = document.createElement('button');
+    logoutBtn.textContent = 'Выйти';
+    logoutBtn.style.marginLeft = '10px';
+    logoutBtn.style.cursor = 'pointer';
+    logoutBtn.onclick = async () => {
+      await fetch('/auth/logout', { method: 'POST' });
+      location.reload();
+    };
+
+    header.appendChild(userDiv);
+    header.appendChild(logoutBtn);
+  } catch {
+    // Не авторизован — оставляем ссылку на вход
+  }
+}
 
 async function loadMovies(search = '') {
   try {
@@ -58,4 +92,5 @@ function closeModalHandler() {
 setupModalHandlers(modal, modalClose, closeModalHandler);
 setupSearch(searchInput, loadMovies);
 
+checkAuth();
 loadMovies();

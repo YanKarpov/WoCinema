@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WolfCinema — Вход и регистрация</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .auth-container {
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      width: 320px;
+      box-shadow: 0 0 10px #000;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      border-radius: 4px;
+      border: none;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #5a9;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #48a;
+    }
+    .toggle-link {
+      margin-top: 10px;
+      color: #5a9;
+      cursor: pointer;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container" id="authContainer">
+    <h2 id="formTitle">Вход</h2>
+
+    <input type="text" id="username" placeholder="Имя пользователя" />
+    <input type="password" id="password" placeholder="Пароль" />
+    <button id="submitBtn">Войти</button>
+
+    <div class="toggle-link" id="toggleAuth">Нет аккаунта? Зарегистрироваться</div>
+
+    <p id="errorMsg" style="color: #f66;"></p>
+  </div>
+
+  <script>
+    const formTitle = document.getElementById('formTitle');
+    const submitBtn = document.getElementById('submitBtn');
+    const toggleAuth = document.getElementById('toggleAuth');
+    const errorMsg = document.getElementById('errorMsg');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+
+    let isLogin = true; // флаг: вход или регистрация
+
+    toggleAuth.onclick = () => {
+      isLogin = !isLogin;
+      formTitle.textContent = isLogin ? 'Вход' : 'Регистрация';
+      submitBtn.textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
+      toggleAuth.textContent = isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Есть аккаунт? Войти';
+      errorMsg.textContent = '';
+    };
+
+    submitBtn.onclick = async () => {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+      if (!username || !password) {
+        errorMsg.textContent = 'Пожалуйста, заполните все поля';
+        return;
+      }
+      try {
+        const url = isLogin ? '/auth/login' : '/auth/register';
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.message || 'Ошибка');
+        }
+        // При успехе — редирект на главную
+        window.location.href = '/';
+      } catch (e) {
+        errorMsg.textContent = e.message;
+      }
+    };
+  </script>
+</body>
+</html>
