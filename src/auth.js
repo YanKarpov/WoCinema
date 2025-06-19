@@ -1,57 +1,49 @@
 import express from 'express';
-import fs from 'fs/promises';
 import bcrypt from 'bcrypt';
+import mongoose from 'mongoose';
 
 const router = express.Router();
-const USERS_PATH = './users.json';
 
-let users = [];
+const userSchema = new mongoose.Schema({
+  username: { type: String, unique: true, required: true },
+  passwordHash: { type: String, required: true },
+  favorites: { type: [Number], default: [] }
+});
 
-async function loadUsers() {
-  if (users.length) return users;
-  try {
-    const data = await fs.readFile(USERS_PATH, 'utf-8');
-    users = JSON.parse(data);
-  } catch {
-    users = [];
-  }
-}
-
-async function saveUsers() {
-  await fs.writeFile(USERS_PATH, JSON.stringify(users, null, 2));
-}
+const User = mongoose.model('User', userSchema);
 
 // Регистрация
 router.post('/register', express.json(), async (req, res) => {
-  await loadUsers();
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ message: 'Имя и пароль обязательны' });
 
-  if (users.find(u => u.username === username)) {
-    return res.status(400).json({ message: 'Пользователь уже есть' });
-  }
+  const existingUser = await User.findOne({ username });
+  if (existingUser) return res.status(400).json({ message: 'Пользователь уже есть' });
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = { id: Date.now(), username, passwordHash, favorites: [] };
-  users.push(user);
-  await saveUsers();
+  const user = new User({ username, passwordHash });
 
-  req.session.userId = user.id;
-  res.json({ id: user.id, username: user.username });
+  try {
+    await user.save();
+  } catch (e) {
+    return res.status(500).json({ message: 'Ошибка сервера' });
+  }
+
+  req.session.userId = user._id;
+  res.json({ id: user._id, username: user.username });
 });
 
 // Логин
 router.post('/login', express.json(), async (req, res) => {
-  await loadUsers();
   const { username, password } = req.body;
-  const user = users.find(u => u.username === username);
+  const user = await User.findOne({ username });
   if (!user) return res.status(400).json({ message: 'Неверные данные' });
 
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) return res.status(400).json({ message: 'Неверные данные' });
 
-  req.session.userId = user.id;
-  res.json({ id: user.id, username: user.username });
+  req.session.userId = user._id;
+  res.json({ id: user._id, username: user.username });
 });
 
 // Выход
@@ -61,35 +53,41 @@ router.post('/logout', (req, res) => {
 
 // Проверка
 router.get('/me', async (req, res) => {
-  await loadUsers();
-  const user = users.find(u => u.id === req.session.userId);
+  if (!req.session.userId) return res.status(401).json({ message: 'Нет авторизации' });
+
+  const user = await User.findById(req.session.userId);
   if (!user) return res.status(401).json({ message: 'Нет авторизации' });
-  res.json({ id: user.id, username: user.username });
+
+  res.json({ id: user._id, username: user.username });
 });
 
 // Избранное
 router.get('/me/favorites', async (req, res) => {
-  await loadUsers();
-  const user = users.find(u => u.id === req.session.userId);
+  if (!req.session.userId) return res.status(401).json({ message: 'Нет авторизации' });
+
+  const user = await User.findById(req.session.userId);
   if (!user) return res.status(401).json({ message: 'Нет авторизации' });
-  res.json(user.favorites || []);
+
+  res.json(user.favorites);
 });
 
 router.post('/me/favorites', express.json(), async (req, res) => {
-  await loadUsers();
-  const user = users.find(u => u.id === req.session.userId);
-  if (!user) return res.status(401).json({ message: 'Нет авторизации' });
+  if (!req.session.userId) return res.status(401).json({ message: 'Нет авторизации' });
 
   const { movieId } = req.body;
   if (!movieId) return res.status(400).json({ message: 'movieId обязателен' });
 
-  if (user.favorites.includes(movieId)) {
-    user.favorites = user.favorites.filter(id => id !== movieId);
+  const user = await User.findById(req.session.userId);
+  if (!user) return res.status(401).json({ message: 'Нет авторизации' });
+
+  const index = user.favorites.indexOf(movieId);
+  if (index >= 0) {
+    user.favorites.splice(index, 1);
   } else {
     user.favorites.push(movieId);
   }
 
-  await saveUsers();
+  await user.save();
   res.json(user.favorites);
 });
 

@@ -1,43 +1,36 @@
 import express from 'express';
-import fs from 'fs/promises';
 import fetch from 'node-fetch';
+import mongoose from 'mongoose';
 
 const router = express.Router();
-const MOVIES_PATH = './movies.json';
 
-let movies = [];
+const movieSchema = new mongoose.Schema({
+  id: Number,          // твой внутренний ID
+  tmdbId: Number,
+  title: String,
+  year: Number,
+  genre: [String],
+  description: String,
+  rating: Number,
+  poster: String,
+  youtubeId: String
+});
 
-async function loadMovies() {
-  if (movies.length) return movies;
-  try {
-    const data = await fs.readFile(MOVIES_PATH, 'utf-8');
-    movies = JSON.parse(data);
-  } catch (error) {
-    console.error('Ошибка чтения movies.json', error);
-  }
-  return movies;
-}
-
-async function saveMovies() {
-  try {
-    await fs.writeFile(MOVIES_PATH, JSON.stringify(movies, null, 2), 'utf-8');
-  } catch (error) {
-    console.error('Ошибка записи movies.json', error);
-  }
-}
+const Movie = mongoose.model('Movie', movieSchema);
 
 // GET /movies?search=
 router.get('/', async (req, res) => {
-  await loadMovies();
   const search = (req.query.search || '').toLowerCase();
 
-  let filtered = movies;
+  let filter = {};
   if (search) {
-    filtered = movies.filter(m => m.title && m.title.toLowerCase().includes(search));
+    filter.title = { $regex: search, $options: 'i' };
   }
 
+  let movies = await Movie.find(filter);
+
   let updated = false;
-  const updatedMovies = await Promise.all(filtered.map(async movie => {
+  const updatedMovies = await Promise.all(movies.map(async movie => {
     if (!movie.tmdbId || movie.title) return movie;
 
     try {
@@ -52,6 +45,7 @@ router.get('/', async (req, res) => {
         movie.description = tmdb.overview || '';
         movie.rating = tmdb.vote_average || null;
         movie.poster = tmdb.poster_path ? `https://image.tmdb.org/t/p/w500${tmdb.poster_path}` : null;
+        await movie.save();
         updated = true;
       }
     } catch (e) {
@@ -60,19 +54,16 @@ router.get('/', async (req, res) => {
     return movie;
   }));
 
-  if (updated) await saveMovies();
-
   res.json(updatedMovies);
 });
 
 // GET /movies/:id
 router.get('/:id', async (req, res) => {
-  await loadMovies();
   const id = Number(req.params.id);
-  const movie = movies.find(m => m.id === id);
+  const movie = await Movie.findOne({ id });
   if (!movie) return res.status(404).json({ message: 'Фильм не найден' });
 
-  if (movie.tmdbId) {
+  if (movie.tmdbId && !movie.youtubeId) {
     try {
       const response = await fetch(
         `https://api.themoviedb.org/3/movie/${movie.tmdbId}?api_key=${process.env.TMDB_API_KEY}&language=ru-RU&append_to_response=videos`
@@ -81,7 +72,7 @@ router.get('/:id', async (req, res) => {
         const tmdb = await response.json();
         const youtube = (tmdb.videos.results || []).find(v => v.site === 'YouTube' && v.type === 'Trailer');
         movie.youtubeId = youtube ? youtube.key : null;
-        await saveMovies();
+        await movie.save();
       }
     } catch (e) {
       console.error('Ошибка TMDb API', e);
