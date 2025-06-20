@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 const router = express.Router();
 
 const movieSchema = new mongoose.Schema({
-  id: Number,          // твой внутренний ID
+  id: Number,          
   tmdbId: Number,
   title: String,
   year: Number,

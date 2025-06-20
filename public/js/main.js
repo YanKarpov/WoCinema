@@ -19,19 +19,22 @@ const modalVideoContainer = document.getElementById('modalVideoContainer');
 const createRoomBtn = document.getElementById('createRoomBtn');
 const body = document.body;
 const authContainer = document.getElementById('authContainer');
-const showFavoritesBtn = document.getElementById('showFavoritesBtn'); // Добавили кнопку
+const showFavoritesBtn = document.getElementById('showFavoritesBtn');
 
-// Новый флаг и массив
 let allMovies = [];
 let showOnlyFavorites = false;
 
 async function checkAuth() {
   try {
-    const res = await fetch('/auth/me');
+    console.log('Проверка авторизации...');
+    const res = await fetch('/auth/me', {
+      credentials: 'include'
+    });
     if (!res.ok) throw new Error('Неавторизован');
     const user = await res.json();
+    console.log('Пользователь авторизован:', user);
 
-    authContainer.innerHTML = ''; // очистить
+    authContainer.innerHTML = '';
     const userDiv = document.createElement('div');
     userDiv.classList.add('header-user');
 
@@ -41,15 +44,19 @@ async function checkAuth() {
     const logoutBtn = document.createElement('button');
     logoutBtn.textContent = 'Выйти';
     logoutBtn.onclick = async () => {
-      await fetch('/auth/logout', { method: 'POST' });
+      console.log('Запрос выхода из системы...');
+      await fetch('/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
       location.reload();
     };
 
     userDiv.appendChild(userNameSpan);
     userDiv.appendChild(logoutBtn);
     authContainer.appendChild(userDiv);
-  } catch {
-    // Не авторизован — показать ссылку на вход
+  } catch (err) {
+    console.log('Пользователь не авторизован:', err.message);
     authContainer.innerHTML = '';
     const loginLink = document.createElement('a');
     loginLink.href = '/auth.html';
@@ -62,37 +69,42 @@ async function checkAuth() {
 
 async function loadMovies(search = '') {
   try {
+    console.log('Загрузка фильмов, поиск:', search);
     const [movies, favorites] = await Promise.all([
       fetchMovies(search),
-      fetch('/auth/me/favorites').then(res => res.ok ? res.json() : [])
+      fetch('/auth/me/favorites', {
+        credentials: 'include'
+      }).then(res => res.ok ? res.json() : [])
     ]);
+    console.log('Фильмы загружены:', movies.length);
+    console.log('Избранные фильмы:', favorites);
 
     movies.forEach(movie => {
       movie.isFavorite = favorites.includes(String(movie.id));
     });
 
-    allMovies = movies; // Сохраняем все фильмы
+    allMovies = movies;
     renderCurrentMovies();
     setupFavoriteButtons();
 
   } catch (error) {
+    console.error('Ошибка загрузки фильмов:', error);
     moviesList.innerHTML = `<p class="error">${error.message}</p>`;
-    console.error('Ошибка:', error);
   }
 }
 
-// Новый рендер с фильтрацией
 function renderCurrentMovies() {
   const filtered = showOnlyFavorites
     ? allMovies.filter(m => m.isFavorite)
     : allMovies;
-
+  console.log('Рендер фильмов, фильтр избранных:', showOnlyFavorites, 'Всего:', filtered.length);
   renderMovies(filtered, moviesList, showMovieDetails);
-  setupFavoriteButtons(); // Чтобы кнопки заново навесились
+  setupFavoriteButtons();
 }
 
 async function showMovieDetails(id) {
   try {
+    console.log('Запрос деталей фильма, ID:', id);
     const movie = await fetchMovieDetails(id);
     renderMovieDetails(movie, {
       modalTitle,
@@ -108,7 +120,7 @@ async function showMovieDetails(id) {
 
     openModal(modal, body, createRoomBtn, id);
   } catch (error) {
-    console.error('Ошибка:', error);
+    console.error('Ошибка при загрузке деталей фильма:', error);
     alert('Не удалось загрузить информацию о фильме');
   }
 }
@@ -119,19 +131,23 @@ function closeModalHandler() {
 
 function setupFavoriteButtons() {
   const favButtons = document.querySelectorAll('.favorite-btn');
+  console.log('Настройка кнопок избранного:', favButtons.length);
   favButtons.forEach(button => {
     button.onclick = async (e) => {
       e.stopPropagation();
 
       const movieCard = button.closest('.movie-card');
       const movieId = movieCard.getAttribute('data-id');
+      console.log('Клик на избранное, фильм ID:', movieId);
 
       try {
         const res = await fetch('/auth/me/favorites', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ movieId }),
         });
+        console.log('Ответ сервера по избранному:', res.status);
 
         if (!res.ok) {
           const data = await res.json();
@@ -140,22 +156,22 @@ function setupFavoriteButtons() {
         }
 
         const favorites = await res.json();
+        console.log('Обновленный список избранных:', favorites);
 
         allMovies.forEach(m => {
           m.isFavorite = favorites.includes(String(m.id));
         });
 
-        renderCurrentMovies(); // Перерендерим с новым избранным
+        renderCurrentMovies();
 
       } catch (error) {
-        console.error(error);
+        console.error('Ошибка сети при обновлении избранного:', error);
         alert('Ошибка сети');
       }
     };
   });
 }
 
-// Новый обработчик кнопки Показывать Избранные
 showFavoritesBtn.onclick = () => {
   showOnlyFavorites = !showOnlyFavorites;
   showFavoritesBtn.classList.toggle('active', showOnlyFavorites);
@@ -163,6 +179,7 @@ showFavoritesBtn.onclick = () => {
     ? 'Показать все'
     : 'Показать избранные';
 
+  console.log('Переключение фильтра избранных:', showOnlyFavorites);
   renderCurrentMovies();
 };
 

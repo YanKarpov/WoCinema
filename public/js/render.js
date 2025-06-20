@@ -62,7 +62,7 @@ export function renderMovieDetails(movie, modalElements) {
   modalPoster.src = movie.poster || 'https://via.placeholder.com/500x750?text=No+poster';
   modalPoster.alt = `${movie.title} постер`;
 
-  modalCast.innerHTML = ''; // Можно добавить позже
+  modalCast.innerHTML = ''; 
 
   if (movie.youtubeId) {
     modalVideoContainer.innerHTML = `
