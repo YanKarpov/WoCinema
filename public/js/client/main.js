@@ -34,6 +34,8 @@ async function checkAuth() {
     const user = await res.json();
     console.log('Пользователь авторизован:', user);
 
+    localStorage.setItem('userRole', user.role);
+
     authContainer.innerHTML = '';
     const userDiv = document.createElement('div');
     userDiv.classList.add('header-user');
@@ -49,12 +51,24 @@ async function checkAuth() {
         method: 'POST',
         credentials: 'include'
       });
+      localStorage.removeItem('userRole'); 
       location.reload();
     };
 
     userDiv.appendChild(userNameSpan);
     userDiv.appendChild(logoutBtn);
     authContainer.appendChild(userDiv);
+
+    if (user.role === 'admin') {
+      const addBtn = document.createElement('button');
+      addBtn.id = 'addMovieBtn';
+      addBtn.textContent = 'Добавить фильм';
+      addBtn.onclick = () => {
+        window.location.href = '/admin-panel.html';
+      };
+      document.querySelector('header').appendChild(addBtn);
+    }
+
   } catch (err) {
     console.log('Пользователь не авторизован:', err.message);
     authContainer.innerHTML = '';
@@ -64,6 +78,7 @@ async function checkAuth() {
     loginLink.style.color = 'white';
     loginLink.style.fontWeight = 'bold';
     authContainer.appendChild(loginLink);
+    localStorage.removeItem('userRole'); 
   }
 }
 

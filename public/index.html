@@ -44,7 +44,12 @@
         </div>
         <div class="modal-body">
           <div class="poster-container">
-            <img id="modalPoster" class="poster" src="" alt="Постер фильма" />
+            <img
+              id="modalPoster"
+              class="poster"
+              src=""
+              alt="Постер фильма"
+            />
             <button id="createRoomBtn" class="create-room-btn">
               Создать комнату
             </button>
@@ -58,6 +63,16 @@
       </div>
     </div>
 
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/client/main.js"></script>
+    <script>
+      const role = localStorage.getItem('userRole');
+      if (role === 'admin') {
+        document.getElementById('adminPanel').style.display = 'inline-block';
+      }
+
+      document.getElementById('addMovieBtn').onclick = () => {
+        alert('Здесь будет форма для добавления фильма. Реализуй по необходимости.');
+      };
+    </script>
   </body>
 </html>
